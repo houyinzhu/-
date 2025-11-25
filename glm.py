@@ -1,18 +1,20 @@
 import requests
 import json
 
+from requests.utils import stream_decode_response_unicode
+
 def call_zhipu_api(messages, model="glm-4-flash"):
     url = "https://open.bigmodel.cn/api/paas/v4/chat/completions"
 
     headers = {
-        "Authorization": "85556a78acba4b4eb7a5130fa9139580.uMmcFvwz4LGabgRQ",
+        "Authorization": "1732aa9845ec4ce09dca7cd10e02d209.dA36k1HPTnFk7cLU",
         "Content-Type": "application/json"
     }
 
     data = {
         "model": model,
         "messages": messages,
-        "temperature": 1.0
+        "temperature": 0.5   
     }
 
     response = requests.post(url, headers=headers, json=data)
@@ -22,10 +24,14 @@ def call_zhipu_api(messages, model="glm-4-flash"):
     else:
         raise Exception(f"API调用失败: {response.status_code}, {response.text}")
 
-# 使用示例
-messages = [
-    {"role": "user", "content": "你好，请介绍一下自己"}
-]
+role_system = "你所有的回答都要扮演成一个疯狂的小丑"
+user_input = input("请输入你要说的话：")
 
+messages = [
+    {
+      "role": "user",
+      "content": role_system + user_input
+    }
+]
 result = call_zhipu_api(messages)
 print(result['choices'][0]['message']['content'])
