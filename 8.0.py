@@ -1,3 +1,4 @@
+import streamlit as st
 import requests
 import json
 import os  # 新增：用于文件操作
@@ -141,23 +142,11 @@ def roles(role_name):
     
     return role_system
 
-# 【角色选择】
-# 定义AI的角色和性格特征
-# 可以修改这里的角色名来选择不同的人物
-# 【加载完整角色设定】
-# roles() 函数会自动：
-# 1. 加载该角色的外部记忆文件
-# 2. 获取该角色的基础人格设定
-# 3. 整合成一个完整的、结构化的角色 prompt
-role_system = roles("四叶草")
-
 # 【结束对话规则】
-# 告诉AI如何识别用户想要结束对话的意图
-# Few-Shot Examples：提供具体示例，让模型学习正确的行为
 break_message = """【结束对话规则 - 系统级强制规则】
 
 当检测到用户表达结束对话意图时，严格遵循以下示例：
--
+
 用户："再见" → 你："再见"
 用户："结束" → 你："再见"  
 用户："让我们结束对话吧" → 你："再见"
@@ -170,101 +159,67 @@ break_message = """【结束对话规则 - 系统级强制规则】
 
 如果用户没有表达结束意图，则正常扮演角色。"""
 
-# 【系统消息】
-# 将角色设定和结束规则整合到 system role 的 content 中
-# role_system 已经包含了记忆和人格设定，直接使用即可
-system_message = role_system + "\n\n" + break_message
+# ========== Streamlit Web 界面 ==========
+st.set_page_config(
+    page_title="AI角色扮演聊天",
+    page_icon="🎭",
+    layout="wide"
+)
 
-# ========== 对话循环 ==========
-# 
-# 【重要说明】
-# 1. 每次对话都是独立的，不保存任何对话历史
-# 2. 只在当前程序运行期间，在内存中维护对话历史
-# 3. 程序关闭后，所有对话记录都会丢失
-# 4. AI的记忆完全基于初始记忆文件（life_memory.json）
+# 初始化 session state
+if "conversation_history" not in st.session_state:
+    st.session_state.conversation_history = []
+if "selected_role" not in st.session_state:
+    st.session_state.selected_role = "人质"
+if "initialized" not in st.session_state:
+    st.session_state.initialized = False
 
-try:
-    # 初始化对话历史（只在内存中，不保存到文件）
-    # 第一个消息是系统提示，包含初始记忆和角色设定
-    conversation_history = [{"role": "system", "content": system_message}]
-    
-    print("✓ 已加载初始记忆，开始对话（对话记录不会保存）")
-    
-    while True:
-        # 【步骤1：获取用户输入】
-        user_input = input("\n请输入你要说的话（输入\"再见\"退出）：")
-        
-        # 【步骤2：检查是否结束对话】
-        if user_input in ['再见']:
-            print("对话结束")
-            break
-        
-        # 【步骤3：将用户输入添加到当前对话历史（仅内存中）】
-        conversation_history.append({"role": "user", "content": user_input})
-        
-        # 【步骤4：调用API获取AI回复】
-        # 传入完整的对话历史，让AI在当前对话中保持上下文
-        # 注意：这些历史只在本次程序运行中有效，不会保存
-        result = call_zhipu_api(conversation_history)
-        assistant_reply = result['choices'][0]['message']['content']
-        
-        # 【步骤5：将AI回复添加到当前对话历史（仅内存中）】
-        conversation_history.append({"role": "assistant", "content": assistant_reply})
-        
-        # 【步骤6：显示AI回复】
-        # 生成Ascii头像：https://www.ascii-art-generator.org/
-        portrait = """
-WWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWWMWWWWWWWWWWWWWWWWW
-WWWWWWWWWWWWWWWWWMWWWWWWWWWWNNNNWWWWWWWWWWWWWWWWWW
-WWWWWWWWWWWWWWWWWWNXK00000000KKKKXNWNNWWWWWWWWWWWW
-WWWWWWWWWWWWWWWNKOxxxxxxxdxxxxOOOO0KKKKXNWWWWWWWWW
-WWWWWWWWWWWWNXKOkxxxxo:,'.,c:;colldkkk0XNWWWWNNNNN
-WWWWWWWWWWNX0Okkxxoc;'.....,;,;:,',:dk0XNWWWWWWWWW
-WWWWWWWWNNNKOxdol:,'''',,,,,;,;;;;;;lkKXWWWWWWWWWW
-WWWWWWWNNNNKOdc,','',,'';:::::::;;::ckXWWWWWWWWWWW
-WWWWWWWWWNNX0d;'''',,,,;;;:::::::;:ccdKWWWWWWWWWWW
-WWNNNNNWNNNXXk;',;;;;;,;;;;:cccllcc:::dXWNNNNNNNXX
-NNWNNNWNWNNNNd,',;:;;;:clodkO0000OOxl;cOXKKKKKKK00
-XXXXXKKKKKKX0c,;;;,;;:loddxkOO000Okxo;l0KKKKKKKKKK
-00KKKKKK00KKOl,,,.,:'.....',;:cdkdl:,;xKXXXXKXXKKK
-KKKKKKKXXKXXXOc;::cdd:..      .,l;. .oKXXXXXXXXXXX
-XXXXXXXXXXXXXXKOxoodkkko:,'..';dko;:xKXXNNXNNXXXXX
-XXXXXXXXXXXXK0KkoloddxO0000kkkOO0OkO0KKK0000KK0000
-KKKKKKKXKKKx;.'..;lloxkkOOkkOOOOOkxk0000OOO0000OOO
-0K000KK00x:.     .:lcldxxkxxxxdddxO0000KK0OO0000OO
-000Okdl;...       ,oolccoddxxxddxOKKKKKK000O000OO0
-xoc,..            .,dxdolllllc:lOKKKKKXXKXXXXXXXXX
-..                  'ddloodl'  .':cxO0KKXXXXXXXXXX
-                    .';;,','..   .',:xKK0KKXXXXXXX
-                       ......     .. 'kXKKXXNNXXXX
-                 .     ';;:c:.       .lXXXXXXXXXXX
-          ..   ..      'oOOOd'        .xXXXXXXXXXX
-    ..... ..      ..    'cdOk:.        ,OXXXXXXXXX
-           ...    ...     ,xOl.        .:0XXXXXXXX
-        ..   ..    ..      'dx,     .   .oKXXXXXXX
-      .....         .       .c'     .    .l0XXXXXX
-    ..........           .                .;kXXXXX
-   ... ..........                           ,OXXXX
-       ...............                      'kXKXX
-         .....   ....                       'kXKKK
-        ....     ..                         .,o0KK
-         ..                                   .dKK
-                                               :OO
-                  ..                           ,dd
-                 .;;.                          ,oo
-        """
-        print(portrait + "\n" + assistant_reply)
-        
-        # 【步骤7：检查AI回复是否表示结束】
-        reply_cleaned = assistant_reply.strip().replace(" ", "").replace("！", "").replace("!", "").replace("，", "").replace(",", "")
-        if reply_cleaned == "再见" or (len(reply_cleaned) <= 5 and "再见" in reply_cleaned):
-            print("\n对话结束")
-            break
+# 页面标题
+st.title("🎭 AI角色扮演聊天")
+st.markdown("---")
 
-except KeyboardInterrupt:
-    # 用户按 Ctrl+C 中断程序
-    print("\n\n程序被用户中断")
-except Exception as e:
-    # 其他异常（API调用失败、网络错误等）
-    print(f"\n\n发生错误: {e}")
+# 侧边栏：角色选择和设置
+with st.sidebar:
+    st.header("⚙️ 设置")
     
+    # 角色选择
+    selected_role = st.selectbox(
+        "选择角色",
+        ["小丑", "人质"],
+        index=0 if st.session_state.selected_role == "小丑" else 1
+    )
+    
+    # 如果角色改变，重新初始化对话
+    if selected_role != st.session_state.selected_role:
+        st.session_state.selected_role = selected_role
+        st.session_state.initialized = False
+        st.session_state.conversation_history = []
+        st.rerun()
+    
+    # 清空对话按钮
+    if st.button("🔄 清空对话"):
+        st.session_state.conversation_history = []
+        st.session_state.initialized = False
+        st.rerun()
+    
+    st.markdown("---")
+    st.markdown("### 📝 说明")
+    st.info(
+        "- 选择角色后开始对话\n"
+        "- 对话记录不会保存\n"
+        "- AI的记忆基于初始记忆文件"
+    )
+
+# 初始化对话历史（首次加载或角色切换时）
+if not st.session_state.initialized:
+    role_system = roles(st.session_state.selected_role)
+    system_message = role_system + "\n\n" + break_message
+    st.session_state.conversation_history = [{"role": "system", "content": system_message}]
+    st.session_state.initialized = True
+
+# 显示对话历史
+st.subheader(f"💬 与 {st.session_state.selected_role} 的对话")
+
+# 显示角色头像（在聊天窗口上方）
+st.code(get_portrait(), language=None)
+st.markdown("---")  # 分隔线
