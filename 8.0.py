@@ -123,6 +123,7 @@ odddxxxkkkkOKXXXXXXXXXXXXXXXXXXXXXXKKKKK000OOOOOO0000KKXXXXXXXXXXXXXXXXXXKKKKKK0
 ooddxxxxkkxk0XXXXXXXXXXXXXXXXXXXXXXXXXKK000OOOOOO000KXXXXXXXXXXXXXXXXXXXXXKKKK0Oxoloddlcccc:;,:loooo
 oodddxxxxkxk0XXXXXXXXXXXXXXXXXXXXXXXXXKKK00OOOOOO00KXXXXXXXXXXXXXXXXXXXXXXXKKK0kdoooddlccccc:;cooooo
 """
+
     # ========== 主程序 ==========
 
 def roles(role_name):
@@ -300,3 +301,51 @@ st.subheader(f"💬 与 {st.session_state.selected_role} 的对话")
 # 显示角色头像（在聊天窗口上方）
 st.code(get_portrait(), language=None)
 st.markdown("---")  # 分隔线
+
+# 显示历史消息（跳过 system 消息）
+for msg in st.session_state.conversation_history[1:]:
+    if msg["role"] == "user":
+        with st.chat_message("user"):
+            st.write(msg["content"])
+    elif msg["role"] == "assistant":
+        with st.chat_message("assistant"):
+            st.write(msg["content"])
+
+# 用户输入
+user_input = st.chat_input("输入你的消息...")
+
+if user_input:
+    # 检查是否结束对话
+    if user_input.strip() == "再见":
+        st.info("对话已结束")
+        st.stop()
+    
+    # 添加用户消息到历史
+    st.session_state.conversation_history.append({"role": "user", "content": user_input})
+    
+    # 显示用户消息
+    with st.chat_message("user"):
+        st.write(user_input)
+    
+    # 调用API获取AI回复
+    with st.chat_message("assistant"):
+        with st.spinner("思考中..."):
+            try:
+                result = call_zhipu_api(st.session_state.conversation_history)
+                assistant_reply = result['choices'][0]['message']['content']
+                
+                # 添加AI回复到历史
+                st.session_state.conversation_history.append({"role": "assistant", "content": assistant_reply})
+                
+                # 显示AI回复
+                st.write(assistant_reply)
+                
+                # 检查是否结束
+                reply_cleaned = assistant_reply.strip().replace(" ", "").replace("！", "").replace("!", "").replace("，", "").replace(",", "")
+                if reply_cleaned == "再见" or (len(reply_cleaned) <= 5 and "再见" in reply_cleaned):
+                    st.info("对话已结束")
+                    st.stop()
+                    
+            except Exception as e:
+                st.error(f"发生错误: {e}")
+                st.session_state.conversation_history.pop()  # 移除失败的用户消息
