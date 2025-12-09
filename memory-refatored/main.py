@@ -1,5 +1,5 @@
 from memory import load_memory, save_memory
-from roles import get_role_prompt, get_system_message
+from roles import get_role_prompt
 from logic import should_exit_by_user, should_exit_by_ai
 from chat import chat_once
 
@@ -10,7 +10,7 @@ def main():
     """主程序入口：初始化对话历史，运行主循环，保存记忆"""
     # 初始化角色设定
     role_system = get_role_prompt(ROLE_NAME)
-    system_message = get_system_message(ROLE_NAME)
+    # system_message = get_system_message (ROLE_NAME)
     
     # 加载历史记忆
     conversation_history = load_memory()
@@ -18,7 +18,7 @@ def main():
     # 如果记忆为空，初始化对话历史
     if not conversation_history:
         conversation_history = [
-            {"role": "system", "content": system_message}
+            {"role": "system", "content": role_system}
         ]
         print("✓ 初始化新对话")
     
