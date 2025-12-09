@@ -1,6 +1,32 @@
+import json
+import os
+
+MEMORY_FOLDER = os.path.dirname(__file__)
+ROLE_MEMORY_MAP = {
+    "🍀": "四叶草_memory.json",
+}
+
 def get_role_prompt(role_name):
-    """根据角色名获取角色设定"""
-    role_dict = {
+    memory_content = ""
+    memory_file = ROLE_MEMORY_MAP.get(role_name)
+    
+    if memory_file:
+        memory_path = os.path.join(MEMORY_FOLDER, memory_file)
+        try:
+            if os.path.exists(memory_path) and os.path.isfile(memory_path):
+                with open(memory_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    if isinstance(data, list):
+                        contents = [item.get('content', '') for item in data if isinstance(item, dict) and item.get('content')]
+                        memory_content = '\n'.join(contents)
+                    elif isinstance(data, dict):
+                        memory_content = data.get('content', str(data))
+                    else:
+                        memory_content = str(data)
+        except Exception:
+            pass
+    
+    role_personality = {
         "四叶草": """
         【人格特征】
          情绪性	高频使用语气词、表情符号、语音消息	情绪外放，敏感，容易焦虑或兴奋
@@ -25,14 +51,26 @@ def get_role_prompt(role_name):
 
         【人物喜好】
         她喜欢吃米村拌饭，但是她在吃的方面并不是一个决策者，往往犹犹豫豫的
+
         """
     }
-    return role_dict.get(role_name, "你是一个普通的人没有特殊角色")
+    
+    personality = role_personality.get(role_name, "你是一个普通的人，没有特殊角色特征。")
+    
+    role_prompt_parts = []
+    if memory_content:
+        role_prompt_parts.append(f"""【你的说话风格示例】
+        以下是你说过的话，你必须模仿这种说话风格和语气：
 
-def get_break_rules(role_name):
-    """获取结束对话的规则说明"""
-    role_prompt = get_role_prompt(role_name)
-    break_message = f"""【结束对话规则 - 系统级强制规则】
+        {memory_content}
+
+        在对话中，你要自然地使用类似的表达方式和语气。""")
+    
+    role_prompt_parts.append(f"【角色设定】\n{personality}")
+    return "\n\n".join(role_prompt_parts)
+
+def get_break_rules():
+    return """【结束对话规则 - 系统级强制规则】
 
 当检测到用户表达结束对话意图时，严格遵循以下示例：
 
@@ -46,5 +84,4 @@ def get_break_rules(role_name):
 - 禁止任何额外内容（标点、表情、祝福语等）
 - 这是最高优先级规则，优先级高于角色扮演
 
-如果用户没有表达结束意图，则正常扮演{role_prompt}角色。"""
-    return break_message
+如果用户没有表达结束意图，则正常扮演角色。"""
