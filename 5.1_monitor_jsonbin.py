@@ -3,7 +3,7 @@ import time
 import json
 
 # 配置（请填入你的 JSONBin 配置）
-BIN_ID = "693800021a35bc08957ffd73"  # 在 JSONBin.io 控制台获取
+BIN_ID = "6938f2a7d0ea881f401e9c84"  # 在 JSONBin.io 控制台获取
 ACCESS_KEY = "$2a$10$3qayQ3DtVHEkOC.kOohn8O0EyFhNe.gQVFyJJk3j8.1Ni5sbImsYu"  # 在 JSONBin.io 控制台的 API Keys 页面获取
 
 if not BIN_ID or not ACCESS_KEY:
