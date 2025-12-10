@@ -19,6 +19,7 @@ def chat_once(history, user_input, role_name="四叶草"):
     history.append({"role": "assistant", "content": assistant_reply})
     
 =======
+<<<<<<< HEAD
 from api import call_zhipu_api
 from roles import get_role_prompt
 
@@ -38,5 +39,26 @@ def chat_once(history, user_input, role_name="四叶草"):
     # 将AI回复添加到对话历史
     history.append({"role": "assistant", "content": assistant_reply})
     
+=======
+from api import call_zhipu_api
+from roles import get_role_prompt
+
+def chat_once(history, user_input, role_name="四叶草"):
+    """进行一次对话交互，返回AI的回复内容"""
+    # 将用户输入添加到对话历史
+    history.append({"role": "user", "content": user_input})
+    
+    # 构造API调用消息
+    system_message = get_role_prompt(role_name)
+    api_messages = [{"role": "system", "content": system_message}] + history[1:]
+    
+    # 调用API获取AI回复
+    result = call_zhipu_api(api_messages)
+    assistant_reply = result['choices'][0]['message']['content']
+    
+    # 将AI回复添加到对话历史
+    history.append({"role": "assistant", "content": assistant_reply})
+    
+>>>>>>> 43e52124ec759fb33752b4cf0978dd5c59ab6862
 >>>>>>> 7d9d9ec32f63a2a65ed81c345f4622f896367003
     return assistant_reply

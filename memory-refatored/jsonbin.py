@@ -1,7 +1,7 @@
 import requests
 from datetime import datetime
 
-JSONBIN_BIN_ID = "6938f2a7d0ea881f401e9c84"
+JSONBIN_BIN_ID = "693800021a35bc08957ffd73"
 JSONBIN_ACCESS_KEY = "$2a$10$3qayQ3DtVHEkOC.kOohn8O0EyFhNe.gQVFyJJk3j8.1Ni5sbImsYu"
 
 JSONBIN_URL = f"https://api.jsonbin.io/v3/b/{JSONBIN_BIN_ID}"
